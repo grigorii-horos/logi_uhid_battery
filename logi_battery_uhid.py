@@ -134,23 +134,40 @@ class VirtualBattery:
 
 def main():
     virtual_devices = {}
+    log_file = os.path.expanduser('~/.logi_battery.log')
+    
+    def log(msg):
+        with open(log_file, 'a') as f:
+            f.write(msg + '\n')
+    
+    log(f"[{time.strftime('%H:%M:%S')}] Service started.")
     
     try:
         while True:
             batteries = get_batteries()
+            
+            # Find disappeared devices
+            current_uids = {f"{bat['node']}_{bat['slot']}" for bat in batteries}
+            for uid in list(virtual_devices.keys()):
+                if uid not in current_uids:
+                    log(f"[{time.strftime('%H:%M:%S')}] Device {uid} disconnected. Removing.")
+                    virtual_devices[uid].close()
+                    del virtual_devices[uid]
+                    
             for bat in batteries:
                 uid = f"{bat['node']}_{bat['slot']}"
                 
                 if uid not in virtual_devices:
                     name = bat['name'] or f"Logitech Device {uid}"
                     virtual_devices[uid] = VirtualBattery(name, uid, uid)
+                    log(f"[{time.strftime('%H:%M:%S')}] Created virtual battery for {name}")
                     time.sleep(1) # Give kernel time to init power_supply
                 
                 # Update the level
                 if bat['percent'] is not None:
                     charge_state = bat.get('charge_state', 0)
                     virtual_devices[uid].update_level(bat['percent'], charge_state)
-                    print(f"[{time.strftime('%H:%M:%S')}] Updated {bat['name']} to {bat['percent']}% (Charging: {charge_state})")
+                    log(f"[{time.strftime('%H:%M:%S')}] Updated {bat['name']} to {bat['percent']}% (Charging: {charge_state})")
             
             # Poll every 60 seconds
             time.sleep(60)

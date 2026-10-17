@@ -6,11 +6,20 @@ arch=('any')
 url="https://github.com/grigorii-horos/logi_uhid_battery"
 license=('MIT')
 depends=('python')
-source=()
-md5sums=()
+makedepends=('git')
+provides=('logi-battery-uhid')
+conflicts=('logi-battery-uhid')
+# from git, not from the files next to this PKGBUILD: a clean chroot (server-home's udom builder) only sees source=()
+source=("$pkgname::git+https://github.com/grigorii-horos/logi_uhid_battery.git")
+sha256sums=('SKIP')
+
+pkgver() {
+    cd "$pkgname"
+    printf "1.0.0.r%s.g%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+}
 
 package() {
-    cd "$srcdir/.."
+    cd "$srcdir/$pkgname"
     
     # Install Python scripts
     install -Dm755 logi_battery_uhid.py "$pkgdir/usr/lib/logi-battery-uhid/logi_battery_uhid.py"
